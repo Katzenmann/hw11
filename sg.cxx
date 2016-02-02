@@ -15,21 +15,30 @@ void init( cmplx* const psi0, const double alpha, const double lambda,
 void writeToFile(const cmplx* const v, const string s, const double dx,
          const int Nx, const double xmin, const double alpha,
          const double lambda, const double omega, const double t);
+
+void step(cmplx* const, cmplx* const, const double,
+	  const double, const double, const int, const cmplx);
 //-----------------------------------
 int main(){
 
-	const int Nx = ;
-	const double xmin = ;
-  const double xmax = ;
-	const double Tend = ;
-	const double dx = ;
-	const double dt =   ;
+	const int Nx = 300;
+	const double xmin = -40;
+  const double xmax = 40;
+	const double Tend = 10*M_PI;
+	const double dx = (xmax-xmin)/(Nx-1);
+	const double dt =  dx/10 ;
+	const cmplx iii = cmplx(0,1);
   double t = 0;
 	const int Na = 10;
 	int Nk = int(Tend / Na / dt + 0.5);
 
 	const double lambda = 10;
   const double omega = 0.2;
+  //double* u0 = new double[Nx];
+  cmplx* u1 = new cmplx[Nx];
+  cmplx* h;
+  const double alpha=pow(0.04,1/4);
+  const double D=1;
 
   stringstream strm;
 
@@ -43,19 +52,45 @@ int main(){
 
 	for (int i = 1; i <= Na; i++) {
 		for (int j = 1; j <= Nk-1; j++) {
-
-         t+=dt;
+	  
+		 step(u1,psi0,dt,dx,D,Nx,iii);//stepfunction?  
+		  h = psi0;
+		  psi0 = u1;
+		  u1 = h;
+		  t+=dt;
+	 
 		}
 		strm.str("");
 		strm << "psi_" << i;
 		writeToFile(psi0,strm.str(), dx,Nx,xmin, alpha, lambda, omega,t);
 	}
   cout << "t = " << t << endl;
-
-	return 0;
+  
+delete[] psi0;
+delete[] u1;
+return 0;
 }
 //-----------------------------------
-
+void step(cmplx* const f1, cmplx* const f0,
+const double dt, const double dx,
+const double D, const int Nx, const cmplx iii)
+{
+cmplx* d=new cmplx[Nx];
+cmplx* u=new cmplx[Nx];
+cmplx* l=new cmplx[Nx];
+for(int i=0;i<Nx;i++) d[i] = 1.0 + iii*(dt/2/dx/dx+dt/2/2*i*dx*0.04*i*dx);
+for(int i=0;i<Nx;i++) u[i] = - iii*dt/4/dx/dx;
+for(int i=0;i<Nx;i++) l[i] = - iii*dt/4/dx/dx;
+for(int i=1; i<Nx;i++){
+d[i]-=u[i-1]*l[i]/d[i-1];
+f0[i]-=f0[i-1]*l[i]/d[i-1];
+}
+f1[Nx-1]=f0[Nx-1]/d[Nx-1];
+for(int i=2;i<Nx+1; i++) f1[Nx-i]=(f0[Nx-i]-u[Nx-i]*f1[Nx+1-i])/d[Nx-i];
+delete[] d;
+delete[] u;
+delete[] l;
+}
 //-----------------------------------
 void writeToFile(const cmplx* const v, const string s, const double dx,
                  const int Nx, const double xmin, const double alpha,
